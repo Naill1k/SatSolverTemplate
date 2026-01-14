@@ -8,12 +8,23 @@
 #include "util/exception.hpp"
 
 namespace sat {
-    Solver::Solver(unsigned numVariables) {
-        throw NOT_IMPLEMENTED;
-    }
+    Solver::Solver(unsigned numVariables) :
+        numVariables(numVariables) {}
 
     bool Solver::addClause(Clause clause) {
-        throw NOT_IMPLEMENTED;
+        if (clause.isEmpty()) {
+            return false;
+        }
+
+        if (clause.size() == 1) {
+            Literal l = clause[0];
+            if (falsified(l)) {
+                return false;
+            }
+        }
+
+        this->clauses.push_back(clause);
+        return true;
     }
 
     /**
@@ -71,19 +82,54 @@ namespace sat {
     }
 
     TruthValue Solver::val(Variable x) const {
-        throw NOT_IMPLEMENTED;
+        if (model.find(x.get()) == model.end()) {
+            return TruthValue::Undefined;
+
+        } else {
+            return model.at(x.get());
+        }
     }
 
     bool Solver::satisfied(Literal l) const {
-        throw NOT_IMPLEMENTED;
+        TruthValue value = val(var(l));
+
+        if ((value == TruthValue::False) && (l.sign() == -1)) {
+            return true;
+
+        } else if ((value == TruthValue::True) && (l.sign() == 1)) {
+            return true;
+
+        } else {
+            return false;
+        }
     }
 
     bool Solver::falsified(Literal l) const {
-        throw NOT_IMPLEMENTED;
+        TruthValue value = val(var(l));
+        
+        if ((value == TruthValue::False) && (l.sign() == 1)) {
+            return true;
+
+        } else if ((value == TruthValue::True) && (l.sign() == -1)) {
+            return true;
+
+        } else {
+            return false;
+        }
     }
 
     bool Solver::assign(Literal l) {
-        throw NOT_IMPLEMENTED;
+        if (falsified(l)) {
+            return false;
+        }
+
+        if (l.sign() == 1) {
+            model[var(l).get()] = TruthValue::True;
+            
+        } else {
+            model[var(l).get()] = TruthValue::False;
+        }
+        return true;
     }
 
     bool Solver::unitPropagate() {

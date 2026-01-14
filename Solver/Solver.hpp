@@ -9,6 +9,7 @@
 #define SOLVER_HPP
 
 #include <memory>
+#include <unordered_map>
 
 #include "basic_structures.hpp"
 #include "Clause.hpp"
@@ -28,7 +29,10 @@ namespace sat {
      * @brief Main solver class
      */
     class Solver {
-        // @TODO private members here
+        unsigned numVariables;
+        std::vector<Clause> clauses;
+        std::unordered_map<unsigned, TruthValue> model;
+
     public:
 
         /**

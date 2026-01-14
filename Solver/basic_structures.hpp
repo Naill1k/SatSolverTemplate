@@ -18,7 +18,7 @@ namespace sat {
      * @brief Represents a truth value
      */
     enum class TruthValue {
-        False = -1, ///< variable is true
+        False = -1, ///< variable is false
         Undefined = 0, ///< variable is unassigned
         True = 1 ///< variable is true
     };
@@ -27,7 +27,8 @@ namespace sat {
      * @brief Structure representing a binary variable in a CNF-SAT problem
      */
     class  Variable {
-        //@TODO Private members here
+        unsigned val;
+        
     public:
         /**
          * CTor
@@ -54,8 +55,9 @@ namespace sat {
      * A literal of variable x is either x or ¬x
      */
     class Literal {
-        //@TODO Private members here
-    public:
+        unsigned val;
+
+        public:
         /**
          * CTor
          * @param val Literal identifier. A literal is related to a variable by dividing its identifier by two. An even
@@ -87,6 +89,10 @@ namespace sat {
          * @return True if both literals are exactly the same (sign and variable)
          */
         bool operator==(Literal) const;
+
+        bool operator<(Literal other) const;
+
+        bool operator>(Literal other) const;
     };
 
     /**

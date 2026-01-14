@@ -7,51 +7,68 @@
 #include "basic_structures.hpp"
 #include "util/exception.hpp"
 
+using namespace std;
+
 namespace sat {
-    // @TODO implementation here
 
 
-    Variable::Variable(unsigned val) {
-        throw NOT_IMPLEMENTED;
-    }
+    Variable::Variable(unsigned val) :
+        val(val) {}
 
     unsigned Variable::get() const {
-        throw NOT_IMPLEMENTED;
+        return this->val;
     }
 
     bool Variable::operator==(Variable other) const {
-        throw NOT_IMPLEMENTED;
+        return this->val == other.val;
     }
 
-    Literal::Literal(unsigned val) {
-        throw NOT_IMPLEMENTED;
-    }
+    Literal::Literal(unsigned val) :
+        val(val) {}
 
     unsigned Literal::get() const {
-        throw NOT_IMPLEMENTED;
+        return this->val;
     }
 
     Literal Literal::negate() const {
-        throw NOT_IMPLEMENTED;
+        if (this->val % 2 == 0) {
+            return Literal(this->val + 1);
+
+        } else {
+            return Literal(this->val - 1);
+        }
     }
 
     short Literal::sign() const {
-        throw NOT_IMPLEMENTED;
+        if (this->val % 2 == 0) {
+            return -1;
+
+        } else {
+            return 1;
+        }
     }
 
     bool Literal::operator==(Literal other) const {
-        throw NOT_IMPLEMENTED;
+        return this->val == other.val;
+    }
+
+    bool Literal::operator<(Literal other) const {
+        return this->val < other.val;
+    }
+
+    bool Literal::operator>(Literal other) const {
+        return this->val > other.val;
     }
 
     Literal pos(Variable x) {
-        throw NOT_IMPLEMENTED;
+        return Literal(2 * x.get() + 1);
     }
 
     Literal neg(Variable x) {
-        throw NOT_IMPLEMENTED;
+        return Literal(2 * x.get());
     }
 
     Variable var(Literal l) {
-        throw NOT_IMPLEMENTED;
+        return Variable(l.get()/2);
     }
 }
