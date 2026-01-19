@@ -115,6 +115,7 @@ TEST(solver, rebase) {
 
     ASSERT_TRUE(s.assign(pos(0)));
     const auto rebased = s.rebase();
+    std::cout << rebased << std::endl;
     EXPECT_EQ(rebased.size(), 3);
     EXPECT_TRUE(test::findClause(Clause({pos(0)}), rebased)) << "Clause " << Clause({pos(0)}) << " was not found";
     EXPECT_TRUE(test::findClause(Clause({neg(2)}), rebased)) << "Clause " << Clause({neg(2)}) << " was not found";

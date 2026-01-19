@@ -10,6 +10,7 @@
 
 #include <memory>
 #include <unordered_map>
+#include <iostream>
 
 #include "basic_structures.hpp"
 #include "Clause.hpp"
@@ -30,8 +31,10 @@ namespace sat {
      */
     class Solver {
         unsigned numVariables;
-        std::vector<Clause> clauses;
+        std::vector<ClausePointer> clauses;
         std::unordered_map<unsigned, TruthValue> model;
+        std::vector<Literal> unitLiterals;
+        std::unordered_map<unsigned, std::vector<ClausePointer>> watches;
 
     public:
 

@@ -9,7 +9,23 @@
 
 namespace sat {
     Solver::Solver(unsigned numVariables) :
-        numVariables(numVariables) {}
+        numVariables(numVariables) {
+            this->clauses = std::vector<ClausePointer>();
+            this->model = std::unordered_map<unsigned, TruthValue>();
+            this->unitLiterals = std::vector<Literal>();
+
+            this->model.reserve(numVariables);
+
+            for (unsigned i = 0; i < numVariables; i++) {
+                this->model[i] = TruthValue::Undefined;
+            }
+
+            this->watches.reserve(2*numVariables);
+
+            for (unsigned i = 0; i < 2*numVariables; i++) {
+                this->watches[i] = std::vector<ClausePointer>();
+            }
+        }
 
     bool Solver::addClause(Clause clause) {
         if (clause.isEmpty()) {
@@ -18,12 +34,30 @@ namespace sat {
 
         if (clause.size() == 1) {
             Literal l = clause[0];
+
             if (falsified(l)) {
                 return false;
             }
+
+            this->unitLiterals.push_back(l);
+            return true;
         }
 
-        this->clauses.push_back(clause);
+        this->clauses.push_back(std::make_shared<Clause>(clause));
+
+
+        // Update watches
+        Literal firstWatcher = clause.getWatcherByRank(0);
+        Literal secondWatcher = clause.getWatcherByRank(1);
+
+        if (firstWatcher != -1) {
+            this->watches[firstWatcher.get()].push_back(this->clauses.back());
+        }
+
+        if (secondWatcher != -1) {
+            this->watches[secondWatcher.get()].push_back(this->clauses.back());
+        }
+
         return true;
     }
 
@@ -34,9 +68,7 @@ namespace sat {
      * (e.g. std::vector<ClausePointer>). Additionally, your solver needs to have a container of unit literals
      * called 'unitLiterals'.
      */
-    auto Solver::rebase() const -> std::vector<Clause> {
-        throw NOT_IMPLEMENTED;
-        /*
+    auto Solver::rebase() const -> std::vector<Clause> {    
         std::vector<Clause> reducedClauses;
         // We check all clauses in the solver. If the clause is SAT (at least one literal is satisfied), we don't include it.
         // Additionally, we remove all falsified literals from the clauses since we only care about unassigned literals.
@@ -78,16 +110,11 @@ namespace sat {
             reducedClauses.emplace_back(std::vector{l});
         }
 
-        return reducedClauses;*/
+        return reducedClauses;
     }
 
-    TruthValue Solver::val(Variable x) const {
-        if (model.find(x.get()) == model.end()) {
-            return TruthValue::Undefined;
-
-        } else {
-            return model.at(x.get());
-        }
+    TruthValue Solver::val(Variable x) const {       
+        return this->model.at(x.get());
     }
 
     bool Solver::satisfied(Literal l) const {
@@ -123,16 +150,75 @@ namespace sat {
             return false;
         }
 
+        if(satisfied(l)) {
+            return true;
+        }
+        
+        this->unitLiterals.push_back(l);
+
         if (l.sign() == 1) {
-            model[var(l).get()] = TruthValue::True;
+            this->model[var(l).get()] = TruthValue::True;
             
         } else {
-            model[var(l).get()] = TruthValue::False;
+            this->model[var(l).get()] = TruthValue::False;
         }
         return true;
     }
 
     bool Solver::unitPropagate() {
-        throw NOT_IMPLEMENTED;
+        unsigned toPropagate = 0;
+        while (toPropagate < this->unitLiterals.size()) {
+            Literal current = this->unitLiterals[toPropagate].negate();
+
+            bool res = true;
+
+            for (const auto &clausePtr : this->watches[current.get()]) {
+                size_t r = clausePtr->getRank(current);
+                size_t i = clausePtr->getIndex(r);
+                size_t start = i;
+                Literal p = clausePtr->getWatcherByRank(1 - r);
+
+                if (!satisfied(p)) {
+                    while(true) {
+                        i += 1;
+                        if (i == clausePtr->size()) {
+                            i = 0;
+                        }
+                        if (i == start) {
+                            break;
+                        }
+                        if ((*clausePtr)[i] != p) {
+                            if (!falsified((*clausePtr)[i])) {
+                                auto it = std::ranges::find(this->watches[current.get()], clausePtr);
+                                this->watches[current.get()].erase(it);
+
+                                clausePtr->setWatcher((*clausePtr)[i], r);
+                                this->watches[(*clausePtr)[i].get()].push_back(clausePtr);
+                                break;
+                            }
+                        }
+                    }
+                    if (i == start) {
+                        if (falsified(p)) {
+                            res = false;
+
+                        } else {
+                            this->unitLiterals.push_back(p);
+                            assign(p);
+                        }
+                    }
+                }
+
+                
+            }
+
+            if (!res) {
+                return false;
+            }
+
+            toPropagate++;
+
+        }
+        return true;
     }
 } // sat
