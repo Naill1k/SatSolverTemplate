@@ -6,6 +6,7 @@
 
 #include "Solver.hpp"
 #include "util/exception.hpp"
+#include "printing.hpp"
 
 namespace sat {
     Solver::Solver(unsigned numVariables) :
@@ -39,7 +40,7 @@ namespace sat {
                 return false;
             }
 
-            this->unitLiterals.push_back(l);
+            assign(l);
             return true;
         }
 
@@ -120,105 +121,125 @@ namespace sat {
     bool Solver::satisfied(Literal l) const {
         TruthValue value = val(var(l));
 
-        if ((value == TruthValue::False) && (l.sign() == -1)) {
-            return true;
+        if ((value == TruthValue::False) && (l.sign() == -1)) return true;
 
-        } else if ((value == TruthValue::True) && (l.sign() == 1)) {
-            return true;
+        if ((value == TruthValue::True) && (l.sign() == 1)) return true;
 
-        } else {
-            return false;
-        }
+        return false;
+        
     }
 
     bool Solver::falsified(Literal l) const {
         TruthValue value = val(var(l));
         
-        if ((value == TruthValue::False) && (l.sign() == 1)) {
-            return true;
+        if ((value == TruthValue::False) && (l.sign() == 1)) return true;
 
-        } else if ((value == TruthValue::True) && (l.sign() == -1)) {
-            return true;
+        if ((value == TruthValue::True) && (l.sign() == -1)) return true;
 
-        } else {
-            return false;
-        }
+        return false;
     }
 
     bool Solver::assign(Literal l) {
-        if (falsified(l)) {
-            return false;
-        }
+        if (falsified(l)) return false;
 
-        if(satisfied(l)) {
-            return true;
-        }
+        if (satisfied(l)) return true;
         
         this->unitLiterals.push_back(l);
 
         if (l.sign() == 1) {
             this->model[var(l).get()] = TruthValue::True;
             
-        } else {
-            this->model[var(l).get()] = TruthValue::False;
-        }
+        } else this->model[var(l).get()] = TruthValue::False;
+        
         return true;
     }
 
     bool Solver::unitPropagate() {
-        unsigned toPropagate = 0;
-        while (toPropagate < this->unitLiterals.size()) {
-            Literal current = this->unitLiterals[toPropagate].negate();
+        size_t toPropagate = 0;
 
-            bool res = true;
+        while (toPropagate < unitLiterals.size()) {
+            // std::cout << "To propagate index: " << toPropagate << std::endl;
 
-            for (const auto &clausePtr : this->watches[current.get()]) {
+            // std::cout << "Clauses" << std::endl;
+            // printClauses();
+
+            // std::cout << "Watches" << std::endl;
+            // printWatches();
+            
+            // std::cout << "Unit literals : " << unitLiterals << std::endl;
+            Literal l = unitLiterals[toPropagate];
+            if (!assign(l)) return false;
+
+            Literal current = l.negate();
+
+            auto& watching = watches[current.get()];
+            for (size_t k = 0; k < watching.size(); k++) {
+
+                ClausePointer clausePtr = watching[k];
                 size_t r = clausePtr->getRank(current);
                 size_t i = clausePtr->getIndex(r);
                 size_t start = i;
                 Literal p = clausePtr->getWatcherByRank(1 - r);
 
+                bool moved = false;
+
                 if (!satisfied(p)) {
-                    while(true) {
-                        i += 1;
-                        if (i == clausePtr->size()) {
-                            i = 0;
-                        }
-                        if (i == start) {
+                    while (true) {
+                        i++;
+                        if (i == clausePtr->size()) i = 0;
+
+                        if (i == start) break;
+
+                        if ((*clausePtr)[i] != p && !falsified((*clausePtr)[i])) {
+                            // Suppression en temps constant de la clause regardant l'ancien watcher
+                            watching[k] = watching.back();
+                            watching.pop_back();
+
+                            // Ajout de la clause regardant le nouveau watcher
+                            clausePtr->setWatcher((*clausePtr)[i], r);
+                            
+                            bool found = false;
+                            for (auto& watch : watches[(*clausePtr)[i].get()]) {
+                                if (watch->sameLiterals(*clausePtr)) {
+                                    found = true;
+                                    break;
+                                }
+                            }
+                            if (!found) watches[(*clausePtr)[i].get()].push_back(clausePtr);
+                            
+                            moved = true;
+                            k--;  // Nouvelle clause à la place de celle qu'on vient d'enlever, donc on incrémente pas k
                             break;
                         }
-                        if ((*clausePtr)[i] != p) {
-                            if (!falsified((*clausePtr)[i])) {
-                                auto it = std::ranges::find(this->watches[current.get()], clausePtr);
-                                this->watches[current.get()].erase(it);
-
-                                clausePtr->setWatcher((*clausePtr)[i], r);
-                                this->watches[(*clausePtr)[i].get()].push_back(clausePtr);
-                                break;
-                            }
-                        }
                     }
-                    if (i == start) {
-                        if (falsified(p)) {
-                            res = false;
 
-                        } else {
-                            this->unitLiterals.push_back(p);
-                            assign(p);
-                        }
+                    if (!moved && i == start) {
+                        if (falsified(p)) return false;
+
+                        assign(p);
                     }
-                }
-
-                
+                }                
             }
 
-            if (!res) {
-                return false;
-            }
-
-            toPropagate++;
-
+            ++toPropagate;
         }
-        return true;
+
+    return true;
     }
+
+    void Solver::printClauses() const {
+        for (const auto &clause : clauses) {
+            std::cout << *clause << std::endl;
+        }
+    }
+
+    void Solver::printWatches() const {
+        for (const auto& [lit, clauses] : watches) {
+            std::cout << "Literal " << lit << " is watched by clauses:" << std::endl;
+            for (const auto& clausePtr : clauses) {
+                std::cout << *clausePtr << std::endl;
+            }
+        }
+    }
+
 } // sat

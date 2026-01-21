@@ -103,6 +103,10 @@ namespace sat {
          */
         bool unitPropagate();
 
+        void printClauses() const;
+
+        void printWatches() const;
+
     };
 } // sat
 
