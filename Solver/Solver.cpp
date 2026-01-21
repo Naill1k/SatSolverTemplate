@@ -242,4 +242,39 @@ namespace sat {
         }
     }
 
+
+    Literal Solver::selectLit() const {
+        for (unsigned v = 0; v < numVariables; ++v) {
+            if (model.at(v) == TruthValue::Undefined) {
+                // Suppose que Literal peut se construire comme: Literal(Variable(v), +1)
+                return Literal(Variable(v), +1);
+            }
+        }
+        // ne devrait pas arriver
+        return Literal(Variable(0), +1);
+    }
+
+    void Solver::unassignBack() {
+        Literal l = unitLiterals.back();
+        unitLiterals.pop_back();
+        model[var(l).get()] = TruthValue::Undefined;
+    }
+
+    void Solver::DPLL() {
+        int satisfied = 0;
+        while (!satisfied) {
+            if (unitPropagate()) {
+                if (unitLiterals.size() == numVariables) {
+                    satisfied = 1;
+                    break;
+
+                } else {
+                    // choose new literal to assign
+                }
+            } else {
+                // backtrack
+            }
+        }
+    }
+
 } // sat

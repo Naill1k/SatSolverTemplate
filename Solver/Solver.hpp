@@ -107,6 +107,12 @@ namespace sat {
 
         void printWatches() const;
 
+        Literal selectLit() const;
+
+        void unassignBack();
+
+        void DPLL() {};
+
     };
 } // sat
 
